@@ -59,17 +59,23 @@ fn build_simavr_unix(out: &Path) {
             .unwrap();
     }
 
-    let result = Command::new("make")
+    Command::new("make")
         .current_dir(out_simavr.join("simavr").join("simavr"))
         .env("OBJ", out_simavr.as_os_str())
+        .arg("sim_core_decl.h")
+        .status()
+        .expect("Couldn't build sim_core_decl.h");
+
+    Command::new("make")
+        .current_dir(out_simavr.join("simavr").join("simavr"))
+        .env("OBJ", out_simavr.as_os_str())
+        // Ensure libelf can be found on macOS
+        .env("CFLAGS", "-I/opt/homebrew/include/libelf -I/opt/homebrew/include -DHAVE_LIBELF")
+        .env("LDFLAGS", "-lelf")
         .arg("-e")
         .arg("libsimavr")
         .status()
         .expect("Couldn't build simavr");
-
-    if !result.success() {
-        panic!("Couldn't build simavr: `make` failed");
-    }
 
     println!("cargo:rustc-link-search={}", out_simavr.display());
     println!("cargo:rustc-link-lib=static=simavr");
